@@ -802,7 +802,7 @@ summary(
 )
 
 ggsave(
-  "../figures/kong_markers_in_ssc_families_parental_age_effect_ac_overlap_20230621.pdf",
+  "../figures/kong_markers_in_ssc_families_parental_age_effect_ac_overlap_20230729.pdf",
   ggplot(
     data =
       rbind.data.frame(
@@ -825,7 +825,8 @@ ggsave(
                  fun.min = function(x) max(mean(x) - sd(x), 0), 
                  fun.max = function(x) mean(x) + sd(x), 
                  geom = "pointrange") +
-    stat_smooth()
+    stat_smooth(method = "glm", formula = y ~ x) + 
+    theme_minimal()
 )
 
 # Alpha analysis
@@ -849,7 +850,7 @@ summary(
 # But quasibinomial with identity link is a good fit with positive correlation
 
 ggsave(
-  "../figures/alpha_by_paternal_age_quasibinomial_identity_20230607.pdf",
+  "../figures/alpha_by_paternal_age_quasibinomial_identity_20230729.pdf",
   ggplot(
     data = 
       subset(str_data_by_indiv, 
@@ -859,6 +860,7 @@ ggsave(
   ) + 
     geom_jitter(height = 0.1, alpha = 0.2) +
     scale_y_continuous(limits = c(0, 1), oob = scales::squish) +
+    theme_minimal() + 
     stat_smooth(method = "glm", formula = y ~ x, method.args = list(family = quasibinomial(link = "identity")))
 )
 
@@ -1171,14 +1173,15 @@ summary(
   )
 )
 ggsave(
-  "../figures/pat_mut_diff_mat_age_20230607.pdf",
+  "../figures/pat_mut_diff_mat_age_20230729.pdf",
   ggplot(
     data = 
       paternal_diff_conditional_paternal_age,
     aes(x = mat_age_diff, y = pat_mut_diff)
   ) +
-    geom_point(alpha = 0.1) +
+    geom_jitter(alpha = 0.1, height = 0.5) +
     scale_x_continuous(limits = c(0, 17)) +
+    theme_minimal() +
     stat_smooth(method = "glm", formula = y ~ x)
 )
 cor.test(
