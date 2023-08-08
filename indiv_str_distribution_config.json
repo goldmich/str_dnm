@@ -1,0 +1,7 @@
+{
+  "vcf_dir": "/net/harris/vol1/sharing/SSC_data",
+  "simons_analysis_dir": "/net/harris/vol1/project/simons_simplex",
+  "str_dnm_file":"/net/harris/vol1/project/simons_simplex/Mitra_etal_SFARI_SSC_denovo_TRs_Nov2020_reptiming_repeat_content_asd_coding_regions.csv",
+  "indiv_analysis_dir": "/net/harris/vol1/project/simons_simplex/indiv_str_distribution/str_dnm",
+  "eichler_str_dir": "/net/eichler/vol26/projects/denovo_variation/nobackups/new_quads/STR"
+}

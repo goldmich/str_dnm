@@ -1,1 +1,226 @@
-../indiv_str_distribution.snake
+"""
+Distribution of allele # x repeat units for SSC
+"""
+
+# load config
+configfile: "indiv_str_distribution_config.json"
+vcf_dir=config["vcf_dir"]
+indiv_analysis_dir=config["indiv_analysis_dir"]
+str_dnm_file=config["str_dnm_file"]
+eichler_str_dir=config["eichler_str_dir"]
+
+# specify default parameters
+params_default="-P sage -l mfree=4G,h_rt=4:00:00"
+
+# Phases of SSC; VCFs are organized
+PHASES = ['phase' + x for x in ['1', '2', '3_1', '3_2', '4']]
+AUTOSOMES = [str(x) for x in range(1, 23)]
+
+rule all:
+	input: 
+		repeat_lengths='%s/indiv_repeat_content.txt' % indiv_analysis_dir,
+		genotypes='%s/indiv_gts.txt' % indiv_analysis_dir,
+		couples_gt='%s/couples_gts.txt' % indiv_analysis_dir,
+		str_dnms_annotated='%s/Mitra_etal_SFARI_SSC_denovo_TRs_Nov2020_reptiming_repeat_content_rsdnm.csv' % indiv_analysis_dir,
+		repeat_units_sequenced='%s/repeat_units_sequenced.txt' % indiv_analysis_dir,
+# 		annotated_panel='%s/sites_annotated_reptiming_dnm_counts_ru.txt' % indiv_analysis_dir,
+		annotated_panel_borders='%s/sites_annotated_reptiming_dnm_counts_ru_borders.txt' % indiv_analysis_dir,
+		couples_for_str_distrib='%s/couples_for_str_distrib.txt' % indiv_analysis_dir,
+		parents_reads_distribution='%s/parents_reads_distribution_padding_2.txt' % indiv_analysis_dir
+	params: sge_opts=params_default
+
+rule filter_vcfs:
+	input: '%s/{phase}_{chr}.sorted.vcf.gz' % vcf_dir
+	output: '%s/tmp/{phase}_{chr}.sorted.filtered.vcf.gz' % indiv_analysis_dir
+	params: sge_opts=params_default
+	shell: """
+		module purge; module load modules{{,-init,-gs}}
+		dumpSTR --vcf {input} \
+		 --out ./tmp/{wildcards.phase}_{wildcards.chr}.sorted.filtered --zip \
+		 --min-locus-hwep 0.00001 \
+		 --min-locus-callrate 0.8
+	
+	"""
+
+rule vcf_to_matrix_chromosome:
+	input: '%s/tmp/{phase}_{chr}.sorted.filtered.vcf.gz' % indiv_analysis_dir
+	output:
+		repeat_lengths='%s/tmp/{phase}_{chr}.indiv_repeat_content.txt' % indiv_analysis_dir,
+		genotypes='%s/tmp/{phase}_{chr}.indiv_gts.txt' % indiv_analysis_dir
+	params: sge_opts=params_default
+	script: '%s/scripts/str_vcf_to_matrix.py' % indiv_analysis_dir
+
+rule vcf_to_couples_matrix_chromosome:
+	input: 
+		vcf='%s/tmp/{phase}_{chr}.sorted.filtered.vcf.gz' % indiv_analysis_dir,
+		str_dnms = str_dnm_file
+	output: 
+		couple_gts='%s/tmp/{phase}_{chr}.couples_gts.txt' % indiv_analysis_dir,
+		allele_lengths='%s/tmp/{phase}_{chr,[0-9]+}.allele_lengths.txt' % indiv_analysis_dir
+	params: sge_opts=params_default
+	script: '%s/scripts/str_vcf_to_matrix_couples.py' % indiv_analysis_dir
+
+rule combine_repeat_content_matrices:
+	input: expand('%s/tmp/{{phase}}_{chr}.indiv_repeat_content.txt' % indiv_analysis_dir, chr=AUTOSOMES)
+	output: '%s/tmp/{phase}.indiv_repeat_content.txt' % indiv_analysis_dir
+	params: sge_opts=params_default
+	script: "%s/scripts/combine_indiv_matrices.py" % indiv_analysis_dir
+
+rule combine_gt_matrices:
+	input: expand('%s/tmp/{{phase}}_{chr}.indiv_gts.txt' % indiv_analysis_dir, chr=AUTOSOMES)
+	output: '%s/tmp/{phase}.indiv_gts.txt' % indiv_analysis_dir
+	params: sge_opts=params_default
+	script: "%s/scripts/combine_indiv_gt_matrices.py" % indiv_analysis_dir
+
+rule combine_couples_gt_matrices:
+	input: expand('%s/tmp/{{phase}}_{chr}.couples_gts.txt' % indiv_analysis_dir, chr=AUTOSOMES)
+	output: '%s/tmp/{phase}.couples_gts.txt' % indiv_analysis_dir
+	params: sge_opts=params_default
+	script: "%s/scripts/combine_couple_gt_matrices.py" % indiv_analysis_dir
+
+rule combine_allele_length_matrices:
+	input: expand('%s/tmp/{phase}_{{chr}}.allele_lengths.txt' % indiv_analysis_dir, phase=PHASES)
+	output: '%s/tmp/{chr,[0-9]+}.allele_lengths.txt' % indiv_analysis_dir
+	params: sge_opts=params_default
+	script: "%s/scripts/combine_allele_length_matrices.py" % indiv_analysis_dir
+
+rule combine_all_content_matrices:
+	input: expand('%s/tmp/{phase}.indiv_repeat_content.txt' % indiv_analysis_dir, phase=PHASES)
+	output: '%s/indiv_repeat_content.txt' % indiv_analysis_dir
+	params: sge_opts=params_default
+	shell: """
+		module purge; module load modules{{,-init,-gs}}
+		awk '(NR == 1) || (FNR > 1)' {input} > {output}
+	
+	"""
+
+rule combine_all_gt_matrices:
+	input: expand('%s/tmp/{phase}.indiv_gts.txt' % indiv_analysis_dir, phase=PHASES)
+	output: '%s/indiv_gts.txt' % indiv_analysis_dir
+	params: sge_opts=params_default
+	shell: """
+		module purge; module load modules{{,-init,-gs}}
+		awk '(NR == 1) || (FNR > 1)' {input} > {output}
+	
+	"""
+
+rule combine_all_couple_gt_matrices:
+	input: expand('%s/tmp/{phase}.couples_gts.txt' % indiv_analysis_dir, phase=PHASES)
+	output: '%s/couples_gts.txt' % indiv_analysis_dir
+	params: sge_opts=params_default
+	shell: """
+		module purge; module load modules{{,-init,-gs}}
+		awk '(NR == 1) || (FNR > 1)' {input} > {output}
+	
+	"""
+
+rule combine_all_allele_length_matrices:
+	input: expand('%s/tmp/{chr}.allele_lengths.txt' % indiv_analysis_dir, chr=AUTOSOMES)
+	output: '%s/allele_lengths.txt' % indiv_analysis_dir
+	params: sge_opts=params_default
+	shell: """
+		module purge; module load modules{{,-init,-gs}}
+		awk '(NR == 1) || (FNR > 1)' {input} > {output}
+	
+	"""
+
+rule annotate_str_dnm_file:
+	input: 
+		str_dnms = str_dnm_file,
+		allele_lengths='%s/allele_lengths.txt' % indiv_analysis_dir
+	output: '%s/Mitra_etal_SFARI_SSC_denovo_TRs_Nov2020_reptiming_repeat_content_rsdnm.csv' % indiv_analysis_dir
+	params: sge_opts=params_default
+	script: '%s/scripts/annotate_str_table_with_rsdnm_status.py' % indiv_analysis_dir
+
+rule annotate_panel_kong_markers:
+	input: 
+		panel = '%s/sites_annotated_reptiming_dnm_counts_ru_borders.txt' % indiv_analysis_dir,
+		kong_markers_hg38 = "%s/kong_et_al_2002_markers_hg38.txt" % indiv_analysis_dir
+	output: '%s/sites_annotated_reptiming_dnm_counts_ru_borders_kong.csv' % indiv_analysis_dir
+	params: sge_opts=params_default
+	script: '%s/scripts/annotate_str_table_kong_markers.py' % indiv_analysis_dir
+
+rule subset_panel_overlap_kong:
+	input:
+		panel = '%s/sites_annotated_reptiming_dnm_counts_ru_borders.txt' % indiv_analysis_dir,
+		kong_markers_hg38 = "%s/kong_et_al_2002_markers_hg38.txt" % indiv_analysis_dir
+	output: '%s/ac_dinucs_overlapping_kong.txt' % indiv_analysis_dir
+	params: sge_opts=params_default
+	shell: """
+		module purge; module load modules{{,-init,-gs}}
+		awk '{{print $1 "\t" $2 "\t" $3}}' {input.kong_markers_hg38} | bedtools sort > ./tmp/kong_markers_hg38_sorted.bed
+		grep -P '\t(AC|CA|GT|TG)\t' {input.panel} | 
+		 awk '{{print $1 "\t" $2 - 1 "\t" $2 }}' |
+		 bedtools intersect -a stdin -b ./tmp/kong_markers_hg38_sorted.bed |
+		 awk '{{print $1 "\t" $3}}' > {output}
+	
+	
+	"""
+
+rule couples_for_str_distrib_phase_chr:
+	input: '%s/tmp/{phase}_{chr}.sorted.filtered.vcf.gz' % indiv_analysis_dir
+	output: '%s/tmp/{phase}_{chr}.couples_for_str_distrib.txt' % indiv_analysis_dir
+	params: sge_opts=params_default
+	script: '%s/scripts/find_matching_couples_gts.py' % indiv_analysis_dir
+
+# most number of individuals for phase2, so using it for panel statistics
+rule panel_statistics:
+	input: '%s/tmp/phase2_{chr}.sorted.filtered.vcf.gz' % indiv_analysis_dir
+	output: '%s/tmp/repeat_units_sequenced.{chr}.txt' % indiv_analysis_dir
+	params: sge_opts=params_default
+	script: '%s/scripts/str_panel_statistics.py' % indiv_analysis_dir
+
+rule combine_panel_statistics:
+	input: expand('%s/tmp/repeat_units_sequenced.{chr}.txt' % indiv_analysis_dir, chr=AUTOSOMES)
+	output: '%s/repeat_units_sequenced.txt' % indiv_analysis_dir
+	params: sge_opts=params_default
+	script: '%s/scripts/combine_str_panel_statistics.py' % indiv_analysis_dir
+	
+# most number of individuals for phase2, so using it for panel statistics AGAIN
+rule annotate_sites_reptiming_dnm_counts:
+	input: '%s/tmp/phase2_{chr}.sorted.filtered.vcf.gz' % indiv_analysis_dir
+	output: '%s/tmp/sites_annotated_reptiming_dnm_counts_ru.{chr}.txt' % indiv_analysis_dir
+	params: sge_opts=params_default
+	script: '%s/scripts/annotate_panel_reptiming_dnm_counts_ref_allele.py' % indiv_analysis_dir
+
+rule combine_annotated_sites:
+	input: expand('%s/tmp/sites_annotated_reptiming_dnm_counts_ru.{chr}.txt' % indiv_analysis_dir, chr=AUTOSOMES)
+	output: '%s/sites_annotated_reptiming_dnm_counts_ru.txt' % indiv_analysis_dir
+	params: sge_opts=params_default
+	shell: """
+		cat {input} > {output}
+	"""
+
+rule annotate_panel_borders:
+	input: '%s/sites_annotated_reptiming_dnm_counts_ru.txt' % indiv_analysis_dir
+	output: '%s/sites_annotated_reptiming_dnm_counts_ru_borders.txt' % indiv_analysis_dir
+	params: sge_opts=params_default
+	script: '%s/scripts/annotate_panel_soft_border.py' % indiv_analysis_dir
+
+# no phase4 indivs in the DNM db so i'm not going to bother looking at their read distributions
+rule combine_couples_for_str_distrib:
+	input: expand('%s/tmp/{phase}_{chr}.couples_for_str_distrib.txt' % indiv_analysis_dir, phase=[x for x in PHASES if x != 'phase4'], chr=AUTOSOMES)
+	output: '%s/couples_for_str_distrib.txt' % indiv_analysis_dir
+	params: sge_opts=params_default
+	shell: """
+		cat {input} > {output}
+	"""
+
+rule sum_family_read_distributions:
+	input: "%s/distribution/new_sites/family_reads/{family}.parents_reads_padding_2.txt" % eichler_str_dir
+	output: '%s/tmp/{family}.parents_reads_distribution_padding_2.txt' % indiv_analysis_dir
+	params: sge_opts=params_default
+	script: '%s/scripts/sum_family_read_distributions.py' % indiv_analysis_dir
+
+FAMILIES_W_READ_DISTRIBS, = glob_wildcards("%s/distribution/new_sites/family_reads/{family}.parents_reads_padding_2.txt" % eichler_str_dir)
+rule combine_family_read_distribtions:
+	input: expand('%s/tmp/{family}.parents_reads_distribution_padding_2.txt' % indiv_analysis_dir, family=FAMILIES_W_READ_DISTRIBS)
+	output: '%s/parents_reads_distribution_padding_2.txt' % indiv_analysis_dir
+	params: sge_opts=params_default
+	shell: """
+		cat {input} > {output}
+	"""
+
+
+
+
