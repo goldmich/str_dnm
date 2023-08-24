@@ -1,0 +1,111 @@
+import pandas as pd
+
+configfile: "config.json"
+
+VCF_DIR = config["vcf_dir"]
+MANIFEST = config["manifest"]
+REF = config["ref"]
+CALLABLE_SCRIPT = config["callable"]
+MATRIX_SCRIPT = config["matrix"]
+PHASE = config["phase"]
+SUM_SCRIPT = config["sum"]
+DNM_FILE = config["dnm_file"]
+
+manifest_df = pd.read_csv(MANIFEST, sep="\t", low_memory=False, header=0)
+manifest_df = manifest_df.astype(str)
+families = list(set(manifest_df.family))
+
+chroms = list(range(1,23))
+
+localrules: all
+
+def find_vcf(wildcards):
+	return "{}/phase{}_{}.sorted.filtered.vcf.gz".format(VCF_DIR, PHASE, wildcards.chrom)
+
+rule all:
+	input: expand("matrices/{family}.{chrom}.parents_callable_dnms_matrix.txt", family = families, chrom = chroms),
+		expand("results/{family}.parents_callable_dnms_matrix.txt", family = families)
+
+wildcard_constraints:
+        chrom="|".join([str(x) for x in chroms]),
+        family="|".join(families)
+
+rule subset_family_chr:
+	input:
+		 manifest = MANIFEST,
+		 full_vcf = find_vcf
+	output:
+		  subset_vcf = temp("vcfs/{family}.{chrom}.vcf.gz")
+	params:
+		  sge_opts = " -l mfree=2G -cwd -N subset.{family}.{chrom}"
+	shell:
+		 """
+		 module load modules modules-init modules-gs modules-eichler
+		 module load bcftools/1.9
+		 
+		 ids=$(awk -v fam="{wildcards.family}" '{{if($2==fam) {{print $1}}}}' {input.manifest})
+		 parents=$(echo $ids | sed 's/ /,/g')
+		 bcftools view -s $parents \
+			-O z \
+			-o {output.subset_vcf} \
+			{input.full_vcf}
+		 """
+
+rule find_uncallable_dnms:
+	input:
+		 subset_vcf = "vcfs/{family}.{chrom}.vcf.gz"
+	output:
+		  callable_vcf = temp("uncallable/{family}.{chrom}.uncallable.vcf.gz")
+	params:
+		  sge_opts = " -l mfree=4G -cwd -N callable.{family}.{chrom}"
+	shell:
+		"""
+		module load modules modules-init modules-gs modules-eichler
+		module load python/3.7.7 numpy/1.21.1 pandas/1.3.1  pysam/0.16.0.1 six/1.15.0
+
+		python {CALLABLE_SCRIPT} -v {input.subset_vcf} \
+			-r {REF} \
+			-f {wildcards.family} \
+			-b {MANIFEST} \
+			-o uncallable/{wildcards.family}.{wildcards.chrom}.uncallable.vcf
+			
+		bgzip uncallable/{wildcards.family}.{wildcards.chrom}.uncallable.vcf
+			
+		"""
+
+rule count_callable_sites:
+	input:
+		 callable_vcf = "uncallable/{family}.{chrom}.uncallable.vcf.gz"
+	output:
+		  callable_matrix = "matrices/{family}.{chrom}.parents_callable_dnms_matrix.txt",
+		  dnms = "dnms/{family}.{chrom}.dnms_w_filter_info.csv"
+	params:
+		sge_opts = " -l mfree=4G -cwd -N count.{family}.{chrom}"
+	shell:
+		 """
+		 module load modules modules-init modules-gs modules-eichler
+		 module load python/3.7.7 numpy/1.21.1 pandas/1.3.1  pysam/0.16.0.1 six/1.15.0
+		 
+		 python {MATRIX_SCRIPT} -i {DNM_FILE} \
+		 	-v {input.callable_vcf} \
+		 	-m {output.callable_matrix} \
+		 	-d {output.dnms} \
+		 	-f {wildcards.family} \
+		 	-c {wildcards.chrom}
+		 """
+
+rule sum_matrices:
+	input:
+		 chromosome_matrices = expand("matrices/{{family}}.{chrom}.parents_callable_dnms_matrix.txt", chrom = chroms)
+	output:
+		  family_matrix = "results/{family}.parents_callable_dnms_matrix.txt"
+	params:
+		sge_opts = " -l mfree=4G -cwd -N sum.{family}.matrix"
+	shell:
+		 """
+		 module load modules modules-init modules-gs modules-eichler
+		 module load python/3.7.7 numpy/1.21.1 pandas/1.3.1  pysam/0.16.0.1 six/1.15.0
+		 
+		 python {SUM_SCRIPT} -i {input.chromosome_matrices} \
+		 	-o {output.family_matrix} 
+		 """

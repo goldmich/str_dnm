@@ -1,0 +1,9 @@
+{
+  "vcf_dir": "/net/harris/vol1/project/simons_simplex/indiv_str_distribution/tmp",
+  "manifest": "manifests/missing_phase_1_manifest.tab",
+  "ref": "/net/eichler/vol26/home/mdnoyes/nobackups/reference/ucsc.hg38.no_alts.fasta",
+  "callable": "/net/eichler/vol26/projects/denovo_variation/nobackups/STRs/denominator/scripts/find_callable.py",
+  "matrix": "/net/eichler/vol26/projects/denovo_variation/nobackups/STRs/denominator/scripts/vcf_w_read_info_to_matrix_couples.py",
+  "sum": "/net/eichler/vol26/projects/denovo_variation/nobackups/STRs/denominator/scripts/sum_read_info_matrix_couples.py",
+  "dnm_file": "/net/eichler/vol26/projects/denovo_variation/nobackups/STRs/filtering/validated_denovo_STRs.csv"
+}
