@@ -28,7 +28,7 @@ colnames(ped_file) <- c("family", "Sample", "father.id", "mother.id", "asd_state
 # ses_data <- read.delim("./SSC_SES_forMG.csv", sep = ",")
 # ses_data$"family" <- sub("\\..*", "", ses_data$individual)
 
-str_data <- read.delim("./dnms_w_filter_info.csv", sep = ",")
+str_data <- read.delim("./dnms_w_filter_info.csv", sep = ",", header = F)
 colnames(str_data) <-
   c("chrom", "pos", "period", "prior", "family", "child", 
     "phenotype", "posterior", "newallele", "mutsize", "poocase", 
@@ -1194,12 +1194,22 @@ cor.test(
 sistr_data <-
   read.delim("./SSC_scores.txt", na.strings = c("N/A")) %>%
   mutate(., chrom = paste("chr", chrom, sep = ""))
+sistr_data$"CI_lower" <- 
+  sapply(sistr_data$ABC_s_95._CI, 
+         function(x)
+           as.numeric(strsplit(strsplit(x, split = " , ")[[1]][1], "\\(")[[1]][2])
+  )
+sistr_data$"CI_upper" <- 
+  sapply(sistr_data$ABC_s_95._CI, 
+         function(x)
+           as.numeric(strsplit(strsplit(x, split = " , ")[[1]][2], "\\)")[[1]][1])
+  )
 str_data <-
   merge(
     str_data %>%
       mutate(., chrom_pos = paste(chrom, pos, sep = "_")),
-    sistr_data[, c("chrom", "start", "ABC_s_median", "LRT_p_value")] %>%
-      filter(., LRT_p_value < 0.05) %>%
+    sistr_data[, c("chrom", "start", "ABC_s_median", "LRT_p_value", "CI_upper", "CI_lower")] %>%
+      filter(., (CI_upper - CI_lower) < 0.3) %>%
       mutate(., chrom_pos = paste(chrom, start, sep = "_"), .keep = "unused"),
     by = "chrom_pos", all.x = T, all.y = F
   )
@@ -1287,6 +1297,7 @@ ggsave(
   ) + 
     geom_boxplot()
 )
+# maybe try adding some small amount to median selection coefficient to include the neutral ones?
 summary(
   glm(
     -log(median_constraint) ~ motherAgeAtBirth,
