@@ -232,6 +232,34 @@ str_data <-
         str_data_by_indiv[, c("ssc_id", "fatherAgeAtBirth", "motherAgeAtBirth")],
         by.x = "child", by.y = "ssc_id", all.x = T)
 
+#####
+# IGV validations
+hifi_igv_validations <- read.delim("./hifi_igv_validations.txt", header = T)
+nrow(subset(hifi_igv_validations,
+            hifi_igv_validations$validation == "true_de_novo" &
+              hifi_igv_validations$igv_validation == "true_de_novo")) /
+  nrow(subset(hifi_igv_validations,
+              hifi_igv_validations$igv_validation == "true_de_novo"))
+nrow(subset(hifi_igv_validations,
+            hifi_igv_validations$validation == "true_de_novo" &
+              hifi_igv_validations$igv_validation != "true_de_novo")) /
+  nrow(subset(hifi_igv_validations,
+              hifi_igv_validations$igv_validation != "true_de_novo"))
+nrow(subset(hifi_igv_validations, 
+            hifi_igv_validations$igv_validation == "true_de_novo")) /
+  nrow(hifi_igv_validations)
+nrow(subset(hifi_igv_validations, 
+            hifi_igv_validations$igv_validation == "true_de_novo" & 
+              nchar(hifi_igv_validations$repeat_unit) > 1)) /
+  nrow(subset(hifi_igv_validations,  
+                nchar(hifi_igv_validations$repeat_unit) > 1))
+nrow(subset(hifi_igv_validations, 
+            hifi_igv_validations$igv_validation == "true_de_novo" & 
+              nchar(hifi_igv_validations$repeat_unit) == 1)) /
+  nrow(subset(hifi_igv_validations,  
+              nchar(hifi_igv_validations$repeat_unit) == 1))
+
+
 # validation_data <- 
 #   read.delim("./mitra_et_al_2021_validations.txt")
 # validation_data <- 
@@ -312,6 +340,87 @@ ggsave(
   ) + geom_histogram() +
     theme_minimal()
 )
+
+#######
+# Some basic statistics w filtered data
+str_data_by_indiv$"total_nonhomopolymer" <-
+  rowSums(str_data_by_indiv[, c("paternal_nonhomopolymer",
+                                "maternal_nonhomopolymer",
+                                "unphased_nonhomopolymer")])
+
+mean(str_data_by_indiv$total_nonhomopolymer)
+mean(str_data_by_indiv$total_nonhomopolymer) +
+  (1.96 * 
+     sd(str_data_by_indiv$total_nonhomopolymer) /
+     sqrt(nrow(str_data_by_indiv)))
+mean(str_data_by_indiv$total_nonhomopolymer) -
+  (1.96 * 
+     sd(str_data_by_indiv$total_nonhomopolymer) /
+     sqrt(nrow(str_data_by_indiv)))
+
+
+mean(str_data_by_indiv$paternal_nonhomopolymer)
+mean(str_data_by_indiv$paternal_nonhomopolymer) +
+  (1.96 * 
+  sd(str_data_by_indiv$paternal_nonhomopolymer) /
+    sqrt(nrow(str_data_by_indiv)))
+mean(str_data_by_indiv$paternal_nonhomopolymer) -
+  (1.96 * 
+     sd(str_data_by_indiv$paternal_nonhomopolymer) /
+     sqrt(nrow(str_data_by_indiv)))
+
+mean(str_data_by_indiv$maternal_nonhomopolymer)
+mean(str_data_by_indiv$maternal_nonhomopolymer) +
+  (1.96 * 
+     sd(str_data_by_indiv$maternal_nonhomopolymer) /
+     sqrt(nrow(str_data_by_indiv)))
+mean(str_data_by_indiv$maternal_nonhomopolymer) -
+  (1.96 * 
+     sd(str_data_by_indiv$maternal_nonhomopolymer) /
+     sqrt(nrow(str_data_by_indiv)))
+
+str_data_by_indiv <-
+  merge(
+    str_data_by_indiv,
+    unique(str_data[, c("child", "phenotype")]),
+    by.x = "ssc_id", by.y = "child", all.x = T, all.y = F
+  )
+mean(subset(str_data_by_indiv$total_nonhomopolymer,
+            str_data_by_indiv$phenotype == 1))
+mean(subset(str_data_by_indiv$total_nonhomopolymer,
+            str_data_by_indiv$phenotype == 1)) +
+  (1.96 * 
+     sd(subset(str_data_by_indiv$total_nonhomopolymer,
+               str_data_by_indiv$phenotype == 1)) /
+     sqrt(nrow(str_data_by_indiv)))
+mean(subset(str_data_by_indiv$total_nonhomopolymer,
+            str_data_by_indiv$phenotype == 1)) -
+  (1.96 * 
+     sd(subset(str_data_by_indiv$total_nonhomopolymer,
+               str_data_by_indiv$phenotype == 1)) /
+     sqrt(nrow(str_data_by_indiv)))
+
+mean(subset(str_data_by_indiv$total_nonhomopolymer,
+            str_data_by_indiv$phenotype == 2))
+mean(subset(str_data_by_indiv$total_nonhomopolymer,
+            str_data_by_indiv$phenotype == 2)) +
+  (1.96 * 
+     sd(subset(str_data_by_indiv$total_nonhomopolymer,
+               str_data_by_indiv$phenotype == 2)) /
+     sqrt(nrow(str_data_by_indiv)))
+mean(subset(str_data_by_indiv$total_nonhomopolymer,
+            str_data_by_indiv$phenotype == 2)) -
+  (1.96 * 
+     sd(subset(str_data_by_indiv$total_nonhomopolymer,
+               str_data_by_indiv$phenotype == 2)) /
+     sqrt(nrow(str_data_by_indiv)))
+
+nrow(subset(str_data, str_data$validation == "true_de_novo" & 
+              str_data$poocase != 4 &
+              !str_data$is_homopolymer)) /
+  nrow(subset(str_data, str_data$validation == "true_de_novo" &
+                !str_data$is_homopolymer))
+
 
 summary(
   glm(
@@ -546,207 +655,6 @@ str_data_for_kong_analysis$"chrom_pos" <-
   paste(str_data_for_kong_analysis$chrom,
         str_data_for_kong_analysis$pos, sep = "_")
 
-
-# set.seed(0)
-# subset_kong <-
-#   kong_markers[sample(c(1:nrow(kong_markers)), size = 2477, replace = F), ]
-# 
-# str_data_for_kong_analysis$"overlap_kong" <-
-#   apply(
-#     str_data_for_kong_analysis,
-#     1,
-#     function(x)
-#       nrow(
-#         filter(kong_markers, X.chrom == x[["chrom"]] & start <= as.numeric(x[["pos"]]) & end >= as.numeric(x[["pos"]]))
-#       )
-#   )
-# str_data_for_kong_analysis$"overlap_kong_subset" <-
-#   apply(
-#     str_data_for_kong_analysis,
-#     1,
-#     function(x)
-#       nrow(
-#         filter(subset_kong, X.chrom == x[["chrom"]] & start <= as.numeric(x[["pos"]]) & end >= as.numeric(x[["pos"]]))
-#       )
-#   )
-
-
-# kong_subset_str_data_by_indiv <-
-#   merge(
-#     str_data_by_indiv[, c("ssc_id", "motherAgeAtBirth", "fatherAgeAtBirth")],
-#     as.data.frame.table(
-#       table(
-#         subset(str_data_for_kong_analysis[, c("child", "poocase")], 
-#                str_data_for_kong_analysis$overlap_kong >= 1 &
-#                  str_data_for_kong_analysis$validation == "true_de_novo")
-#       )
-#     ) %>%
-#       spread(poocase, Freq) %>%
-#       rename(., "paternal" = "2",
-#              "maternal" = "3"),
-#     by.x = "ssc_id", by.y = "child", all.x = T
-#   ) %>%
-#   mutate(., paternal = replace_na(paternal, 0),
-#          maternal = replace_na(maternal, 0), .keep = "unused")
-
-# kong_subset_str_data_by_indiv <-
-#   merge(
-#     str_data_by_indiv[, c("ssc_id", "motherAgeAtBirth", "fatherAgeAtBirth")],
-#     as.data.frame.table(
-#       table(
-#         subset(str_data_for_kong_analysis[, c("child", "poocase")], 
-#                str_data_for_kong_analysis$overlap_kong_subset >= 1 &
-#                  str_data_for_kong_analysis$validation == "true_de_novo")
-#       )
-#     ) %>%
-#       spread(poocase, Freq) %>%
-#       rename(., "paternal_subset" = "2",
-#              "maternal_subset" = "3"),
-#     by.x = "ssc_id", by.y = "child", all.x = T
-#   ) %>%
-#   mutate(., paternal_subset = replace_na(paternal_subset, 0),
-#          maternal_subset = replace_na(maternal_subset, 0), .keep = "unused")
-
-# str_panel_w_kong <- read.delim("./sites_annotated_reptiming_dnm_counts_ru_borders_kong.csv", header = F)
-# names(str_panel_w_kong) <-
-#   c("chrom", "pos", "repeat_unit", "len_ref_ru", "reptiming", "n_dnms", "X", "border_homology", "in_kong")
-# 
-# denom_kong <- nrow(subset(str_panel_w_kong,
-#                           str_panel_w_kong$in_kong & nchar(str_panel_w_kong$repeat_unit) > 1))
-# denom_kong_subset <-
-#   sum(
-#     apply(
-#       subset(
-#         str_panel_w_kong,
-#         str_panel_w_kong$in_kong
-#       ),
-#       1,
-#       function(x)
-#         nrow(
-#           filter(subset_kong, X.chrom == x[["chrom"]] & start <= as.numeric(x[["pos"]]) & end >= as.numeric(x[["pos"]]))
-#         )
-#     )
-#   )
-# 
-# kong_subset_str_data_by_indiv$"maternal_rate" <-
-#   kong_subset_str_data_by_indiv$maternal / denom_kong
-# kong_subset_str_data_by_indiv$"paternal_rate" <-
-#   kong_subset_str_data_by_indiv$paternal / denom_kong
-# 
-# kong_subset_str_data_by_indiv$"maternal_subset_rate" <-
-#   kong_subset_str_data_by_indiv$maternal_subset / denom_kong_subset
-# kong_subset_str_data_by_indiv$"paternal_subset_rate" <-
-#   kong_subset_str_data_by_indiv$paternal_subset / denom_kong_subset
-
-# summary(
-#   glm(
-#     maternal_rate ~ motherAgeAtBirth, data = kong_subset_str_data_by_indiv
-#   )
-# )
-# # significant now!
-# summary(
-#   glm(
-#     maternal_subset_rate ~ motherAgeAtBirth, data = kong_subset_str_data_by_indiv
-#   )
-# )
-# # but subset is not significant; P value unaffected by changes in denom (which is not accurate above)
-# summary(
-#   glm(
-#     paternal_rate ~ fatherAgeAtBirth, data = kong_subset_str_data_by_indiv
-#   )
-# )
-
-# kong_subset_str_data_by_indiv$"maternal_age_decile" <-
-#   cut(kong_subset_str_data_by_indiv$motherAgeAtBirth, 
-#       breaks = quantile(kong_subset_str_data_by_indiv$motherAgeAtBirth, probs = seq(0, 1, by=0.1), na.rm = T))
-# kong_subset_str_data_by_indiv$"paternal_age_decile" <-
-#   cut(kong_subset_str_data_by_indiv$fatherAgeAtBirth, 
-#       breaks = quantile(kong_subset_str_data_by_indiv$fatherAgeAtBirth, probs = seq(0, 1, by=0.1), na.rm = T))
-# 
-# kong_subset_str_data_by_indiv$"median_maternal_age" <-
-#   quantile(kong_subset_str_data_by_indiv$motherAgeAtBirth,
-#            probs = seq(0.05, 0.95, by=0.1), na.rm = T)[as.numeric(kong_subset_str_data_by_indiv$maternal_age_decile)]
-# kong_subset_str_data_by_indiv$"median_paternal_age" <-
-#   quantile(kong_subset_str_data_by_indiv$fatherAgeAtBirth,
-#            probs = seq(0.05, 0.95, by=0.1), na.rm = T)[as.numeric(kong_subset_str_data_by_indiv$paternal_age_decile)]
-
-# ggsave(
-#   "../figures/kong_markers_in_ssc_families_parental_age_effect_20230510.pdf",
-#   ggplot(
-#     data =
-#       rbind.data.frame(
-#         data.frame(
-#           rate = kong_subset_str_data_by_indiv$paternal_rate,
-#           median_age = kong_subset_str_data_by_indiv$median_paternal_age,
-#           age = kong_subset_str_data_by_indiv$fatherAgeAtBirth,
-#           lineage = "paternal"
-#         ),
-#         data.frame(
-#           rate = kong_subset_str_data_by_indiv$maternal_rate,
-#           median_age = kong_subset_str_data_by_indiv$median_maternal_age,
-#           age = kong_subset_str_data_by_indiv$motherAgeAtBirth,
-#           lineage = "maternal"
-#         )
-#       ),
-#     aes(x = median_age, y = rate, color = lineage, group = lineage)
-#   ) + 
-#     stat_summary(fun = mean,
-#                  fun.min = function(x) max(mean(x) - sd(x), 0), 
-#                  fun.max = function(x) mean(x) + sd(x), 
-#                  geom = "pointrange") +
-#     stat_smooth()
-# )
-# 
-# ggsave(
-#   "../figures/kong_markers_subset_in_ssc_families_parental_age_effect_20230605.pdf",
-#   ggplot(
-#     data =
-#       rbind.data.frame(
-#         data.frame(
-#           rate = kong_subset_str_data_by_indiv$paternal_subset_rate,
-#           median_age = kong_subset_str_data_by_indiv$median_paternal_age,
-#           age = kong_subset_str_data_by_indiv$fatherAgeAtBirth,
-#           lineage = "paternal"
-#         ),
-#         data.frame(
-#           rate = kong_subset_str_data_by_indiv$maternal_subset_rate,
-#           median_age = kong_subset_str_data_by_indiv$median_maternal_age,
-#           age = kong_subset_str_data_by_indiv$motherAgeAtBirth,
-#           lineage = "maternal"
-#         )
-#       ),
-#     aes(x = median_age, y = rate, color = lineage, group = lineage)
-#   ) + 
-#     stat_summary(fun = mean,
-#                  fun.min = function(x) max(mean(x) - sd(x), 0), 
-#                  fun.max = function(x) mean(x) + sd(x), 
-#                  geom = "pointrange") +
-#     stat_smooth()
-# )
-
-# # Bootstrap down to 2477
-# str_panel_w_kong$"chrom_pos" <-
-#   paste(str_panel_w_kong$chrom,
-#         str_panel_w_kong$pos, sep = "_")
-# str_panel_w_kong_subset <-
-#   subset(
-#     str_panel_w_kong,
-#     str_panel_w_kong$in_kong
-#   )
-# kong_markers_subset <- 
-#   kong_markers[sample(c(1:nrow(kong_markers)), size = 2477, replace = F),]
-# str_panel_w_kong_subset$"curr_subset" <-
-#   apply(
-#     str_panel_w_kong_subset,
-#     1,
-#     function(x)
-#       nrow(
-#         filter(kong_markers_subset, X.chrom == x[["chrom"]] & start <= as.numeric(x[["pos"]]) & end >= as.numeric(x[["pos"]]))
-#       )
-#   )
-# str_data_for_kong_analysis$"curr_kong_subset" <-
-#   str_data_for_kong_analysis$chrom_pos %in% str_panel_w_kong_subset$chrom_pos[str_panel_w_kong_subset$curr_subset > 0]
-
 ac_sites_in_kong <- read.delim("./ac_dinucs_overlapping_kong.txt", header = F) %>%
   rename(., chrom = "V1", pos = "V2") %>%
   mutate(., chrom_pos = paste(chrom, pos, sep = "_"))
@@ -863,6 +771,10 @@ ggsave(
     theme_minimal() + 
     stat_smooth(method = "glm", formula = y ~ x, method.args = list(family = quasibinomial(link = "identity")))
 )
+quantile(rowSums(
+  str_data_by_indiv[, c("paternal_nonhomopolymer", "maternal_nonhomopolymer")]
+))
+
 
 # Maternal hotspot
 maternal_hotspots_table <- read.delim("./nature24018-s3.txt", header = T)
@@ -1110,18 +1022,77 @@ ggsave(
   width = 7, height = 5
 )
 
-# Postzygotic analysis
-# combi <- function(vec1)
-# {
-#   si <- length(vec1)
-#   first <- rep(vec1, (si-1):0)
-#   secR <- rev(vec1)
-#   second <- secR[sequence(1:(si-1))]
-#   second <- rev(second)
-#   combi <- matrix(cbind(first, second), ncol = 2)
-#   return(combi)
-# }
+# any evidence that we phase more AT-only DNMs relative to GC as mothers age
+summary(
+  glm(
+    phased_fraction ~ motherAgeAtBirth,
+    data = str_data_by_indiv %>% 
+      mutate(., phased_fraction = maternal_nonhomopolymer / 
+               (unphased_nonhomopolymer + maternal_nonhomopolymer)),
+    family = binomial()
+  )
+)
+# no
 
+summary(
+  glm(
+    AT_phased_fraction ~ motherAgeAtBirth,
+    data = 
+      merge(
+        str_data_by_indiv,
+        with(
+          subset(str_data, 
+                 str_data$validation == "true_de_novo" &
+                   !str_data$is_homopolymer &
+                   str_data$poocase == 4),
+          as.data.frame.table(table(child, any_gc))
+        )  %>%
+          pivot_wider(., names_from = any_gc, values_from = Freq) %>%
+          rename(., "AT_unphased" = "FALSE", "GC_unphased" = "TRUE"),
+        by.x = "ssc_id", by.y = "child", all.x = T
+      ) %>%
+      mutate(., AT_unphased = replace_na(AT_unphased, 0),
+             GC_unphased = replace_na(GC_unphased, 0)) %>%
+      mutate(., AT_phased_fraction = AT_maternal / (AT_unphased + AT_maternal),
+             GC_phased_fraction = GC_maternal / (GC_unphased + GC_maternal)),
+    family = binomial()
+  )
+)
+
+
+summary(
+  glm(
+    GC_phased_fraction ~ motherAgeAtBirth,
+    data = 
+      merge(
+        str_data_by_indiv,
+        with(
+          subset(str_data, 
+                 str_data$validation == "true_de_novo" &
+                   !str_data$is_homopolymer &
+                   str_data$poocase == 4),
+          as.data.frame.table(table(child, any_gc))
+        )  %>%
+          pivot_wider(., names_from = any_gc, values_from = Freq) %>%
+          rename(., "AT_unphased" = "FALSE", "GC_unphased" = "TRUE"),
+        by.x = "ssc_id", by.y = "child", all.x = T
+      ) %>%
+      mutate(., AT_unphased = replace_na(AT_unphased, 0),
+             GC_unphased = replace_na(GC_unphased, 0)) %>%
+      mutate(., AT_phased_fraction = AT_maternal / (AT_unphased + AT_maternal),
+             GC_phased_fraction = GC_maternal / (GC_unphased + GC_maternal)),
+    family = binomial()
+  )
+)
+
+# summary(
+#   glm(
+#     freq_reweight ~ motherAgeAtBirth * any_gc,
+#     data = mat_str_dnm_by_nuc_content
+#   )
+# )
+
+# Postzygotic analysis
 paternal_diff_conditional_paternal_age <-
   bind_rows(
     lapply(
@@ -1190,6 +1161,96 @@ cor.test(
   method = "spearman", alternative = "greater")
 # No association
 
+pat_age_model <-
+  glm(
+    paternal_nonhomopolymer ~ fatherAgeAtBirth,
+    data = str_data_by_indiv, family = poisson(link = "identity")
+  )
+mat_age_model <-
+  glm(
+    maternal_nonhomopolymer ~ motherAgeAtBirth,
+    data = str_data_by_indiv, family = poisson(link = "identity")
+  )
+# Power analysis
+simulate_muts_w_postzygotic <- function(pat_age, mat_age, fraction_mat_postzygotic){
+  pat_muts = rpois(n = length(pat_age), lambda = predict(pat_age_model, list(fatherAgeAtBirth = pat_age)))
+  pat_muts = pat_muts +
+    rpois(n = length(pat_age), lambda = (mat_age * mat_age_model$coefficients[[2]] * fraction_mat_postzygotic))
+  return(pat_muts)
+}
+simulate_postzygotic <- function(fraction_mat_postzygotic){
+  curr_df = 
+    str_data_by_indiv %>%
+    select(., fatherAgeAtBirth, motherAgeAtBirth) %>%
+    filter(., !is.na(fatherAgeAtBirth) & !is.na(motherAgeAtBirth))
+  curr_df$"pat_muts" <-
+    simulate_muts_w_postzygotic(
+      curr_df$fatherAgeAtBirth,
+      curr_df$motherAgeAtBirth,
+      fraction_mat_postzygotic
+    )
+  diff_muts_fix_pat_age =
+    bind_rows(
+      lapply(
+        unique(round(curr_df$fatherAgeAtBirth)),
+        function(pat_age){
+          curr_rows = which(round(curr_df$fatherAgeAtBirth) == pat_age)
+          if(length(curr_rows) < 2) {return()}
+          # set.seed(0)
+          curr_table =
+            apply(
+              matrix(
+                c(
+                  sample(curr_rows, 
+                         size = length(curr_rows)  - 
+                           length(curr_rows) %% 2, replace = F)
+                ), ncol = 2
+              ),
+              1,
+              function(x){
+                older = which(curr_df$motherAgeAtBirth[unlist(x)] == 
+                                max(curr_df$motherAgeAtBirth[unlist(x)]))
+                mat_age_diff = 
+                  curr_df$motherAgeAtBirth[x[older]] - 
+                  curr_df$motherAgeAtBirth[x[(older %% 2) + 1]]
+                pat_mut_diff = 
+                  curr_df$pat_muts[x[older]] - 
+                  curr_df$pat_muts[x[(older %% 2) + 1]]
+                return(c(mat_age_diff, pat_mut_diff))
+              }
+            )
+          return(
+            cbind.data.frame(
+              pat_age,
+              matrix(unlist(curr_table), byrow = T, ncol = 2)
+            )
+          )
+        }
+      )
+    )
+  colnames(diff_muts_fix_pat_age)[c(2:3)] <- c("mat_age_diff", "pat_mut_diff")
+  return(cor.test(
+    diff_muts_fix_pat_age$mat_age_diff,
+    diff_muts_fix_pat_age$pat_mut_diff,
+    method = "spearman", alternative = "greater")$p.value)
+}
+power_analysis_postzygotic <-
+  data.frame("pz_fract" = rep(seq(0, 1, by = 0.1), each = 500))
+power_analysis_postzygotic$"p_val" <-
+  sapply(
+    power_analysis_postzygotic$pz_fract,
+    function(x)
+          simulate_postzygotic(x)
+  )
+ggsave(
+  "../figures/power_analysis_postzygotic_20231220.pdf",
+  ggplot(
+    data = power_analysis_postzygotic %>%
+      mutate(., is_significant = p_val < 0.05),
+    aes(x = as.factor(pz_fract))
+  ) + geom_bar(aes(fill = is_significant), position="fill")
+)
+
 # Selection
 sistr_data <-
   read.delim("./SSC_scores.txt", na.strings = c("N/A")) %>%
@@ -1208,11 +1269,16 @@ str_data <-
   merge(
     str_data %>%
       mutate(., chrom_pos = paste(chrom, pos, sep = "_")),
-    sistr_data[, c("chrom", "start", "ABC_s_median", "LRT_p_value", "CI_upper", "CI_lower")] %>%
+    sistr_data[, c("chrom", "start", "ABC_s_median", "LRT_p_value", "CI_upper", "CI_lower", "optimal_ru")] %>%
       filter(., (CI_upper - CI_lower) < 0.3) %>%
       mutate(., chrom_pos = paste(chrom, start, sep = "_"), .keep = "unused"),
     by = "chrom_pos", all.x = T, all.y = F
   )
+str_data <-
+  str_data %>%
+  mutate(., selection_coef = ABC_s_median * abs(newallele - optimal_ru))
+# how many sites?
+nrow(filter(sistr_data, (CI_upper - CI_lower) < 0.3))
 # str_data$"under_selection_called" <-
 #   -log(str_data$ABC_s_median) > -log(median(str_data$ABC_s_median, na.rm = T))
 # 
@@ -1297,57 +1363,277 @@ ggsave(
   ) + 
     geom_boxplot()
 )
+# Reviewer test: compare distributions
+ks.test(
+  subset(str_data$selection_coef, str_data$phenotype == 2 & 
+           !str_data$is_homopolymer & 
+           str_data$validation == "true_de_novo"),
+  subset(str_data$selection_coef, str_data$phenotype == 1 & 
+           !str_data$is_homopolymer & 
+           str_data$validation == "true_de_novo")
+)
+
+ks.test(
+  subset(str_data$selection_coef, 
+         str_data$validation == "true_de_novo" &
+           str_data$poocase == 2 &
+           str_data$fatherAgeAtBirth >= median(str_data_by_indiv$fatherAgeAtBirth, na.rm = T)),
+  subset(str_data$selection_coef, 
+         str_data$validation == "true_de_novo" &
+           str_data$poocase == 2 &
+           str_data$fatherAgeAtBirth < median(str_data_by_indiv$fatherAgeAtBirth, na.rm = T))
+)
+ks.test(
+  subset(str_data$selection_coef, 
+         str_data$validation == "true_de_novo" &
+           str_data$poocase == 3 &
+           str_data$motherAgeAtBirth >= median(str_data_by_indiv$fatherAgeAtBirth, na.rm = T)),
+  subset(str_data$selection_coef, 
+         str_data$validation == "true_de_novo" &
+           str_data$poocase == 3 &
+           str_data$motherAgeAtBirth < median(str_data_by_indiv$fatherAgeAtBirth, na.rm = T))
+)
+
 # maybe try adding some small amount to median selection coefficient to include the neutral ones?
+# summary(
+#   glm(
+#     -log(median_constraint) ~ motherAgeAtBirth,
+#     data = 
+#       str_data %>%
+#       filter(., poocase == 3 & validation == "true_de_novo" & !is_homopolymer) %>%
+#       group_by(., child, motherAgeAtBirth) %>%
+#       summarise(., median_constraint = median(ABC_s_median + 0.0000001))
+#   )
+# )
+# summary(
+#   glm(
+#     -log(median_constraint) ~ motherAgeAtBirth * phenotype,
+#     data = 
+#       str_data %>%
+#       filter(., poocase == 3 & validation == "true_de_novo" & !is_homopolymer) %>%
+#       group_by(., child, motherAgeAtBirth, phenotype) %>%
+#       summarise(., median_constraint = median(ABC_s_median + 0.0000001))
+#   )
+# )
+# summary(
+#   glm(
+#     -log(median_constraint) ~ fatherAgeAtBirth,
+#     data = 
+#       str_data %>%
+#       filter(., poocase == 2 & validation == "true_de_novo" & !is_homopolymer) %>%
+#       group_by(., child, fatherAgeAtBirth) %>%
+#       summarise(., median_constraint = median(ABC_s_median + 0.0000001))
+#   )
+# )
+# summary(
+#   glm(
+#     -log(median_constraint) ~ fatherAgeAtBirth + phenotype,
+#     data = 
+#       str_data %>%
+#       filter(., poocase == 2 & validation == "true_de_novo" & !is_homopolymer) %>%
+#       group_by(., child, fatherAgeAtBirth, phenotype) %>%
+#       summarise(., median_constraint = median(ABC_s_median + 0.0000001))
+#   )
+# )
+# summary(
+#   glm(
+#     -log(median_constraint) ~ fatherAgeAtBirth * phenotype,
+#     data = 
+#       str_data %>%
+#       filter(., poocase == 2 & validation == "true_de_novo" & !is_homopolymer) %>%
+#       group_by(., child, fatherAgeAtBirth, phenotype) %>%
+#       summarise(., median_constraint = median(ABC_s_median + 0.0000001))
+#   )
+# )
+
+# did we filter predominantly neutral or deleterious mutations?
+mean(subset(str_data$selection_coef, str_data$validation == "true_de_novo"), na.rm = T)
+mean(subset(str_data$selection_coef, str_data$validation != "true_de_novo"), na.rm = T)
+
+# how many mutations did we filter that have a selection coefficient?
+table(
+  subset(str_data$validation, !is.na(str_data$selection_coef))
+)
+nrow(subset(str_data, str_data$validation != "true_de_novo" & !is.na(str_data$selection_coef))) /
+  nrow(subset(str_data, !is.na(str_data$selection_coef)))
+
+glm(
+  total_selection ~ motherAgeAtBirth
+)
+
+# here
+quantile(subset(sistr_data$ABC_s_median, 
+         (sistr_data$CI_upper - sistr_data$CI_lower) < 0.3), probs = seq(0, 1, by = 0.05))
+
+# here calling constrained sites ones with s median > 90th %ile
+denom_constrained = nrow(subset(sistr_data, sistr_data$ABC_s_median > 0.00252 & (sistr_data$CI_upper - sistr_data$CI_lower) < 0.3))
+denom_neutral = nrow(subset(sistr_data, sistr_data$ABC_s_median == 0 & sistr_data$CI_upper - sistr_data$CI_lower < 0.3))
+
 summary(
   glm(
-    -log(median_constraint) ~ motherAgeAtBirth,
+    n ~ motherAgeAtBirth * is_constrained + offset(log(denom)),
     data = 
       str_data %>%
-      filter(., poocase == 3 & validation == "true_de_novo" & !is_homopolymer & ABC_s_median > 0) %>%
-      group_by(., child, motherAgeAtBirth) %>%
-      summarise(., median_constraint = median(ABC_s_median))
+      mutate(., child = as.factor(child)) %>%
+      filter(., poocase == 3 & validation == "true_de_novo" & !is_homopolymer) %>%
+      mutate(., is_constrained = ifelse(ABC_s_median == 0, F, ifelse(ABC_s_median > 0.00252, T, NA))) %>%
+      group_by(., child, motherAgeAtBirth, is_constrained, phenotype, .drop = F) %>%
+      count(.) %>%
+      pivot_wider(., names_from = is_constrained, values_from = n, values_fill = 0) %>%
+      select(., -`NA`) %>%
+      pivot_longer(., cols = c(`FALSE`, `TRUE`), names_to = "is_constrained", values_to = "n") %>%
+      mutate(., phenotype = as.factor(phenotype), 
+             denom = ifelse(is_constrained, denom_constrained, denom_neutral)),
+    family = poisson()
   )
 )
+
 summary(
   glm(
-    -log(median_constraint) ~ motherAgeAtBirth * phenotype,
+    n ~ fatherAgeAtBirth * is_constrained + offset(log(denom)),
     data = 
       str_data %>%
-      filter(., poocase == 3 & validation == "true_de_novo" & !is_homopolymer & ABC_s_median > 0) %>%
-      group_by(., child, motherAgeAtBirth, phenotype) %>%
-      summarise(., median_constraint = median(ABC_s_median))
+      mutate(., child = as.factor(child)) %>%
+      filter(., poocase == 2 & validation == "true_de_novo" & !is_homopolymer) %>%
+      mutate(., is_constrained = ifelse(ABC_s_median == 0, F, ifelse(ABC_s_median > 0.00252, T, NA))) %>%
+      group_by(., child, fatherAgeAtBirth, is_constrained, phenotype, .drop = F) %>%
+      count(.) %>%
+      pivot_wider(., names_from = is_constrained, values_from = n, values_fill = 0) %>%
+      select(., -`NA`) %>%
+      pivot_longer(., cols = c(`FALSE`, `TRUE`), names_to = "is_constrained", values_to = "n") %>%
+      mutate(., phenotype = as.factor(phenotype), 
+             denom = ifelse(is_constrained, denom_constrained, denom_neutral)),
+    family = poisson()
   )
 )
+
 summary(
   glm(
-    -log(median_constraint) ~ fatherAgeAtBirth,
+    n ~ motherAgeAtBirth * is_constrained * phenotype + offset(log(denom)),
     data = 
       str_data %>%
-      filter(., poocase == 2 & validation == "true_de_novo" & !is_homopolymer & ABC_s_median > 0) %>%
-      group_by(., child, fatherAgeAtBirth) %>%
-      summarise(., median_constraint = median(ABC_s_median))
+      mutate(., child = as.factor(child)) %>%
+      filter(., poocase == 3 & validation == "true_de_novo" & !is_homopolymer) %>%
+      mutate(., is_constrained = ifelse(ABC_s_median == 0, F, ifelse(ABC_s_median > 0.00252, T, NA))) %>%
+      group_by(., child, motherAgeAtBirth, is_constrained, phenotype, .drop = F) %>%
+      count(.) %>%
+      pivot_wider(., names_from = is_constrained, values_from = n, values_fill = 0) %>%
+      select(., -`NA`) %>%
+      pivot_longer(., cols = c(`FALSE`, `TRUE`), names_to = "is_constrained", values_to = "n") %>%
+      mutate(., phenotype = as.factor(phenotype), 
+             denom = ifelse(is_constrained, denom_constrained, denom_neutral)),
+    family = poisson()
   )
 )
+
 summary(
   glm(
-    -log(median_constraint) ~ fatherAgeAtBirth + phenotype,
+    n ~ fatherAgeAtBirth * is_constrained * phenotype + offset(log(denom)),
     data = 
       str_data %>%
-      filter(., poocase == 2 & validation == "true_de_novo" & !is_homopolymer & ABC_s_median > 0) %>%
-      group_by(., child, fatherAgeAtBirth, phenotype) %>%
-      summarise(., median_constraint = median(ABC_s_median))
+      mutate(., child = as.factor(child)) %>%
+      filter(., poocase == 2 & validation == "true_de_novo" & !is_homopolymer) %>%
+      mutate(., is_constrained = ifelse(ABC_s_median == 0, F, ifelse(ABC_s_median > 0.00252, T, NA))) %>%
+      group_by(., child, fatherAgeAtBirth, is_constrained, phenotype, .drop = F) %>%
+      count(.) %>%
+      pivot_wider(., names_from = is_constrained, values_from = n, values_fill = 0) %>%
+      select(., -`NA`) %>%
+      pivot_longer(., cols = c(`FALSE`, `TRUE`), names_to = "is_constrained", values_to = "n") %>%
+      mutate(., phenotype = as.factor(phenotype), 
+             denom = ifelse(is_constrained, denom_constrained, denom_neutral)),
+    family = poisson()
   )
 )
+
+# here 
 summary(
   glm(
-    -log(median_constraint) ~ fatherAgeAtBirth * phenotype,
+    n ~ fatherAgeAtBirth + phenotype,
     data = 
       str_data %>%
-      filter(., poocase == 2 & validation == "true_de_novo" & !is_homopolymer & ABC_s_median > 0) %>%
-      group_by(., child, fatherAgeAtBirth, phenotype) %>%
-      summarise(., median_constraint = median(ABC_s_median))
+      mutate(., child = as.factor(child)) %>%
+      filter(., poocase == 2 & validation == "true_de_novo" & !is_homopolymer) %>%
+      group_by(., child, fatherAgeAtBirth, phenotype, .drop = F) %>%
+      count(.) %>%
+      mutate(., phenotype = as.factor(phenotype)),
+    family = poisson(link = "identity")
   )
 )
+
+summary(
+  glm(
+    n ~ motherAgeAtBirth + phenotype,
+    data = 
+      str_data %>%
+      mutate(., child = as.factor(child)) %>%
+      filter(., poocase == 3 & validation == "true_de_novo" & !is_homopolymer) %>%
+      group_by(., child, motherAgeAtBirth, phenotype, .drop = F) %>%
+      count(.) %>%
+      mutate(., phenotype = as.factor(phenotype)),
+    family = poisson(link = "identity")
+  )
+)
+
+summary(
+  glm(
+    n ~ fatherAgeAtBirth + motherAgeAtBirth + phenotype,
+    data = 
+      str_data %>%
+      mutate(., child = as.factor(child)) %>%
+      filter(., validation == "true_de_novo" & !is_homopolymer) %>%
+      group_by(., child, motherAgeAtBirth, fatherAgeAtBirth, phenotype, .drop = F) %>%
+      count(.) %>%
+      mutate(., phenotype = as.factor(phenotype)),
+    family = poisson(link = "identity")
+  )
+)
+
+summary(
+  glm(
+    n ~ fatherAgeAtBirth + motherAgeAtBirth + phenotype,
+    data = 
+      str_data %>%
+      mutate(., child = as.factor(child)) %>%
+      filter(., validation == "true_de_novo" & !is_homopolymer) %>%
+      group_by(., child, motherAgeAtBirth, fatherAgeAtBirth, phenotype, .drop = F) %>%
+      count(.) %>%
+      mutate(., phenotype = as.factor(phenotype)),
+    family = poisson(link = "identity")
+  )
+)
+
+# okay i currently see something very weird that is possibly explainable by low n
+# I observe that there is an excess of mutations in probands, even after accounting for parental age
+#   ONLY when i regress all mutations against both parents' age and kid's diagnosis
+# However i cannot replicate these effects when I examine parent-specific effects with phased data
+# The coefficients are kinda in the same direction but maybe has to do with downsampling...?
+
+# fisher's exact test of diagnosis x is_constrained? will this be robust to parental age differences?
+# i think that it might be - we expect more mutations overall in probands (due to both parental age effects and possible assoc. with diagnosis)
+# but is this increase in mutations different between mutations that are deleterious vs those that are not?
+
+str_data %>%
+  mutate(., child = as.factor(child)) %>%
+  filter(., validation == "true_de_novo" & !is_homopolymer) %>%
+  mutate(., is_constrained = ifelse(ABC_s_median == 0, F, ifelse(ABC_s_median > 0.0025, T, NA))) %>%
+  group_by(., child, is_constrained, phenotype, .drop = F) %>%
+  count(.) %>%
+  pivot_wider(., names_from = is_constrained, values_from = n, values_fill = 0) %>%
+  mutate(., has_deleterious = `TRUE` > 0) %>%
+  group_by(., phenotype, has_deleterious) %>%
+  count(.)
+
+chisq.test(
+  matrix(
+    c(665, 921, 657, 929), nrow = 2, ncol = 2
+  )
+)
+
+str_data %>%
+  mutate(., child = as.factor(child)) %>%
+  group_by(., child, fatherAgeAtBirth, motherAgeAtBirth, phenotype) %>%
+  group_by(., phenotype) %>%
+  summarize(., mean_pat_age = mean(fatherAgeAtBirth, na.rm = T), mean_mat_age = mean(motherAgeAtBirth, na.rm = T))
 
 # can we find motifs enriched for maternal age signature?
 complement <-
@@ -1451,6 +1737,25 @@ str_panel$regularized_motif <-
     str_panel$repeat_unit,
     regularize_repeat_unit
   )
+# how many AC dinucs? quick analysis comparing sample size to Sun et al.
+nrow(
+  subset(
+    str_panel, str_panel$regularized_motif == "AC"
+  )
+)
+# 24832 trios x 2.4k sites in Sun et al.
+24832 * 2477
+# 55830 total AC sites here
+55830 * 3172
+nrow(
+  subset(
+    str_panel, nchar(str_panel$repeat_unit) > 1
+  )
+)
+# 682k total non-homopolymers
+682966 * 3172
+
+
 str_panel$"has_CAT" <-
   sapply(
     str_panel$regularized_motif,
@@ -1505,52 +1810,52 @@ maternal_age_interaction_by_motif_vector <-
     )
   }
 
-run_motif_model <-
-  optim(
-    starting_vector,
-    maternal_age_interaction_by_motif_vector,
-    method = "L-BFGS-B",
-    lower=rep(0, times = nrow(common_motif_df)),
-    upper=rep(1, times = nrow(common_motif_df)),
-    control = list(trace=4, maxit=100))
-
-run_motif_model_10x <-
-  lapply(
-    c(1:10),
-    function(x)
-      optim(
-        sample(starting_vector, size = length(starting_vector), replace = F),
-        maternal_age_interaction_by_motif_vector,
-        method = "L-BFGS-B",
-        lower=rep(0, times = nrow(common_motif_df)),
-        upper=rep(1, times = nrow(common_motif_df)),
-        control = list(trace=4, maxit=100))
-  )
-
-
-in_denom_final = 
-  str_panel %>%
-  mutate(., motif_binary = 
-           regularized_motif %in% common_motif_df$motif[
-             run_motif_model$par > 0.5
-           ]) %>%
-  filter(., nchar(regularized_motif) > 1) %>%
-  count(., motif_binary)
-
-random_grid_search_output <-
-  sapply(
-    c(1:1000),
-    function(x){
-      v = sample(starting_vector, size = length(starting_vector), replace = F)
-      return(
-        list(
-          output_val = maternal_age_interaction_by_motif_vector(v),
-          curr_params = v
-        )
-      )
-    }
-
-  )
+# run_motif_model <-
+#   optim(
+#     starting_vector,
+#     maternal_age_interaction_by_motif_vector,
+#     method = "L-BFGS-B",
+#     lower=rep(0, times = nrow(common_motif_df)),
+#     upper=rep(1, times = nrow(common_motif_df)),
+#     control = list(trace=4, maxit=100))
+# 
+# run_motif_model_10x <-
+#   lapply(
+#     c(1:10),
+#     function(x)
+#       optim(
+#         sample(starting_vector, size = length(starting_vector), replace = F),
+#         maternal_age_interaction_by_motif_vector,
+#         method = "L-BFGS-B",
+#         lower=rep(0, times = nrow(common_motif_df)),
+#         upper=rep(1, times = nrow(common_motif_df)),
+#         control = list(trace=4, maxit=100))
+#   )
+# 
+# 
+# in_denom_final = 
+#   str_panel %>%
+#   mutate(., motif_binary = 
+#            regularized_motif %in% common_motif_df$motif[
+#              run_motif_model$par > 0.5
+#            ]) %>%
+#   filter(., nchar(regularized_motif) > 1) %>%
+#   count(., motif_binary)
+# 
+# random_grid_search_output <-
+#   sapply(
+#     c(1:1000),
+#     function(x){
+#       v = sample(starting_vector, size = length(starting_vector), replace = F)
+#       return(
+#         list(
+#           output_val = maternal_age_interaction_by_motif_vector(v),
+#           curr_params = v
+#         )
+#       )
+#     }
+# 
+#   )
 
 common_motif_df$"motif_slope_coef" <-
   sapply(
@@ -1726,8 +2031,6 @@ ggplot(
   aes(x = motherAgeAtBirth, y = Freq)
 ) + geom_point(aes(color = motif_binary)) +
   stat_smooth(aes(color = motif_binary), formula = y ~ x, method = "glm")
-
-
     
   
 
